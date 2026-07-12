@@ -4,6 +4,7 @@
 html, body { height: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  overflow-x: hidden;
   background: radial-gradient(ellipse at 50% 30%, #1d5c3a 0%, #123f27 55%, #0b2b1a 100%);
   color: #eef4ee;
   min-height: 100vh;
@@ -70,7 +71,8 @@ button.off { opacity: .38; text-decoration: line-through; }
 
 .join-panel { margin-top: 14px; }
 .join-row { display: flex; gap: 10px; }
-.join-row input { flex: 1; text-transform: uppercase; letter-spacing: 6px; font-size: 20px; text-align: center; }
+.join-row input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 6px; font-size: 20px; text-align: center; }
+.join-row button { flex: 0 0 auto; }
 .join-row button { padding: 0 26px; }
 
 /* ---------- room ---------- */
@@ -266,7 +268,10 @@ button.off { opacity: .38; text-decoration: line-through; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 720px) {
+  .home-head { padding-top: 4px; }
   .home-head h1 { font-size: 26px; }
+  .head-btns { position: static; justify-content: center; margin-top: 12px; }
+  .join-row input { letter-spacing: 4px; font-size: 18px; }
   #opp-row { flex-direction: row; flex-wrap: wrap; }
   .opp-zone { flex-basis: 46%; }
   #table-mid { order: 3; flex-basis: 100%; }
