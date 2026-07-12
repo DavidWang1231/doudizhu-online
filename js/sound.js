@@ -11,7 +11,7 @@ const Snd = (() => {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     if (!ctx) ctx = new AC();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state !== 'running') ctx.resume().catch(() => { });
     return ctx;
   }
 

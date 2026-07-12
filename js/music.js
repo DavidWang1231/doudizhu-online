@@ -54,7 +54,9 @@ const Bgm = (() => {
       master.gain.value = 0.4;
       master.connect(ctx.destination);
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    // 'suspended' after autoplay blocking or tab backgrounding, and Safari's
+    // non-standard 'interrupted' after media interruptions — resume both.
+    if (ctx.state !== 'running') ctx.resume().catch(() => { });
     return ctx;
   }
 
@@ -98,6 +100,13 @@ const Bgm = (() => {
 
   function tick() {
     if (!ctx) return;
+    if (ctx.state !== 'running') { ctx.resume().catch(() => { }); return; }
+    // If the context was suspended for a while the schedule is far in the
+    // past; re-anchor instead of machine-gunning the missed notes.
+    if (nextEvent < EVENTS.length) {
+      const nextT = loopStart + EVENTS[nextEvent][0] * BEAT;
+      if (nextT < ctx.currentTime - 1) loopStart = ctx.currentTime + 0.2 - EVENTS[nextEvent][0] * BEAT;
+    }
     const ahead = ctx.currentTime + 0.6;
     while (true) {
       if (nextEvent >= EVENTS.length) { loopStart += LOOP; nextEvent = 0; }
@@ -128,8 +137,13 @@ const Bgm = (() => {
   return {
     get enabled() { return enabled; },
     get playing() { return !!timer; },
-    /* Called on any user gesture: starts the loop once audio is allowed. */
-    poke() { if (enabled && !timer) start(); },
+    /* Called on any user gesture: starts the loop once audio is allowed,
+       and revives a context the browser suspended behind our back. */
+    poke() {
+      if (!enabled) return;
+      if (!timer) start();
+      else if (ctx && ctx.state !== 'running') ctx.resume().catch(() => { });
+    },
     toggle() {
       enabled = !enabled;
       try { localStorage.setItem('ddz_bgm', enabled ? '1' : '0'); } catch (e) { }

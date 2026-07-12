@@ -101,6 +101,8 @@ function applyStaticTexts() {
   $('#btn-leave-room').textContent = t('b_leave');
   $('#inp-code').placeholder = t('ph_code');
   $('#btn-lang').textContent = LANG === 'zh' ? 'EN' : '中文';
+  for (const id of ['#btn-bgm', '#btn-bgm2']) $(id).title = t('tt_bgm');
+  for (const id of ['#btn-snd', '#btn-snd2']) $(id).title = t('tt_snd');
   $('#btn-lang2').textContent = LANG === 'zh' ? 'EN' : '中文';
   $('#help-body').innerHTML = t('help_body');
   document.documentElement.lang = LANG === 'zh' ? 'zh' : 'en';
@@ -804,6 +806,9 @@ function boot() {
 
   bindHandDrag();
   window.addEventListener('resize', () => { if (App.view) layoutHand(); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { Snd.unlock(); Bgm.poke(); }
+  });
   const openHelp = () => $('#help-modal').classList.remove('hidden');
   $('#btn-help').onclick = openHelp;
   $('#btn-help2').onclick = openHelp;
