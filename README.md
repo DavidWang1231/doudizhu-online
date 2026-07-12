@@ -8,8 +8,6 @@ friend — pure static files, peer-to-peer via WebRTC, no server and no signup.
 - **Classic 3-player** — for 1–3 humans; AIs fill any empty seats (practice
   solo, invite one friend, or play a full human table)
 - **Heads-up duel (二人对决)** — 1v1 variant, 17 cards set aside
-- **4-player teams (2v2)** — partners sit opposite; the bid winner's partner
-  joins the landlord side, 13 cards each
 - **Wildcard rounds (癞子场)** — one random rank is wild each round, with soft
   bombs, natural-rank rules and the 4-wild super bomb
 - **No-shuffle mode (不洗牌)** — barely-shuffled deck, bombs everywhere
@@ -29,7 +27,7 @@ WebRTC (PeerJS's free public broker is only used for the handshake). No game
 data touches any server.
 
 1. Host: pick a mode → **Create room** → send the 4-character code to friends
-   (up to 2 guests in Classic, 3 in 2v2, 1 in Duel)
+   (up to 2 guests in Classic, 1 in Duel)
 2. Guest: enter the code → **Join**
 3. Host: **Start game**
 
@@ -80,7 +78,7 @@ node tests/engine.test.js
 
 纯静态网页斗地主,和朋友点对点联机(1–3 人,空位 AI 补),无需服务器、无需注册。
 
-**模式**:经典三人(AI 补位)/ 二人对决 / 四人 2v2 / 癞子场 / 不洗牌疯狂场,支持加倍、
+**模式**:经典三人(AI 补位)/ 二人对决 / 癞子场 / 不洗牌疯狂场,支持加倍、
 底分、春天/反春计分、局间累计积分,带提示和快捷聊天。
 
 **联机方式**:创建房间后把 4 位房间码发给朋友,对方在首页输入即可直连
