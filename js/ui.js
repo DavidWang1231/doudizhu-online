@@ -466,9 +466,54 @@ function statusHTML(v) {
   return `<span class="status">${t('thinking', esc(nm))}</span>`;
 }
 
+/* Sound effects are driven by diffing consecutive views, so they fire
+   identically for local play, host and guest. */
+function sndSig(v) {
+  return {
+    round: v.roundNo,
+    state: v.state,
+    actor: v.actor,
+    plays: v.players.map(p => {
+      const lp = p.lastPlay;
+      if (!lp) return '';
+      return lp.pass ? 'P' : lp.cards.map(c => c.id).join('-');
+    }),
+    bids: v.players.map(p => (p.bid === null || p.bid === undefined) ? '' : String(p.bid)).join(','),
+    dbls: v.players.map(p => (p.dbl === null || p.dbl === undefined) ? '' : (p.dbl ? '1' : '0')).join(','),
+  };
+}
+
+function playSounds(v) {
+  const prev = App._snd;
+  const cur = sndSig(v);
+  App._snd = cur;
+  if (!prev || prev.round !== cur.round) {
+    if (v.state === 'bidding') Snd.deal();
+    return;
+  }
+  for (let i = 0; i < v.players.length; i++) {
+    if (cur.plays[i] === prev.plays[i] || cur.plays[i] === '') continue;
+    if (cur.plays[i] === 'P') { Snd.pass(); continue; }
+    const c = v.players[i].lastPlay.combo;
+    if (c && c.type === 'rocket') Snd.rocket();
+    else if (c && c.type === 'bomb') Snd.bomb();
+    else Snd.play();
+  }
+  if (cur.bids !== prev.bids) Snd.bid();
+  if (cur.dbls !== prev.dbls) Snd.dbl();
+  if (v.state === 'settle' && prev.state !== 'settle' && v.result) {
+    const r = v.result;
+    const iWon = r.landlordWon ? v.mySeat === v.landlord : v.mySeat !== v.landlord;
+    if (iWon) Snd.win(); else Snd.lose();
+    return;
+  }
+  if (v.state === 'playing' && cur.actor === v.mySeat && prev.actor !== v.mySeat) Snd.turn();
+}
+
 function renderGame() {
   const v = App.view;
   if (!v) return;
+  playSounds(v);
   // prune stale selection
   const handIds = new Set(v.myHand.map(c => c.id));
   for (const id of [...App.selected]) if (!handIds.has(id)) App.selected.delete(id);
@@ -515,6 +560,7 @@ function bindActionButtons() {
   $$('#my-hand .card').forEach(el => el.onclick = () => {
     const id = +el.dataset.id;
     if (App.selected.has(id)) App.selected.delete(id); else App.selected.add(id);
+    Snd.tick();
     renderGame();
   });
 }
@@ -534,6 +580,7 @@ function doHint() {
 
 function showBubble(seat, text) {
   if (!text) return;
+  Snd.chat();
   if (App.bubbles[seat]) clearTimeout(App.bubbles[seat].timer);
   App.bubbles[seat] = { text, timer: setTimeout(() => { delete App.bubbles[seat]; renderBubbles(); }, 3200) };
   renderBubbles();
@@ -610,6 +657,7 @@ function goHome() {
   App.view = null;
   App.selected = new Set();
   App.bubbles = {};
+  App._snd = null;
   $('#settle-overlay').classList.add('hidden');
   $('#chat-pop').classList.add('hidden');
   showScreen('screen-home');
@@ -634,6 +682,17 @@ function boot() {
   };
   $('#btn-lang').onclick = toggleLang;
   $('#btn-lang2').onclick = toggleLang;
+
+  const setSndBtns = () => {
+    const label = Snd.enabled ? '🔊' : '🔇';
+    $('#btn-snd').textContent = label;
+    $('#btn-snd2').textContent = label;
+  };
+  setSndBtns();
+  $('#btn-snd').onclick = () => { Snd.toggle(); setSndBtns(); };
+  $('#btn-snd2').onclick = () => { Snd.toggle(); setSndBtns(); };
+  // Browsers only allow audio after a user gesture; arm on any click.
+  document.addEventListener('pointerdown', () => Snd.unlock());
   const openHelp = () => $('#help-modal').classList.remove('hidden');
   $('#btn-help').onclick = openHelp;
   $('#btn-help2').onclick = openHelp;
