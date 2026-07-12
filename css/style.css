@@ -66,6 +66,7 @@ button.primary { background: linear-gradient(180deg, #f7ca5e, #eda93a); color: #
 button.primary:disabled { filter: grayscale(.7); opacity: .5; cursor: default; }
 button.ghost { background: rgba(255,255,255,.12); color: #eef4ee; }
 button.small { padding: 6px 12px; font-size: 13px; }
+button.off { opacity: .38; text-decoration: line-through; }
 
 .join-panel { margin-top: 14px; }
 .join-row { display: flex; gap: 10px; }

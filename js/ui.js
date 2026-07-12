@@ -691,8 +691,16 @@ function boot() {
   setSndBtns();
   $('#btn-snd').onclick = () => { Snd.toggle(); setSndBtns(); };
   $('#btn-snd2').onclick = () => { Snd.toggle(); setSndBtns(); };
+
+  const setBgmBtns = () => {
+    $('#btn-bgm').classList.toggle('off', !Bgm.enabled);
+    $('#btn-bgm2').classList.toggle('off', !Bgm.enabled);
+  };
+  setBgmBtns();
+  $('#btn-bgm').onclick = () => { Bgm.toggle(); setBgmBtns(); };
+  $('#btn-bgm2').onclick = () => { Bgm.toggle(); setBgmBtns(); };
   // Browsers only allow audio after a user gesture; arm on any click.
-  document.addEventListener('pointerdown', () => Snd.unlock());
+  document.addEventListener('pointerdown', () => { Snd.unlock(); Bgm.poke(); });
   const openHelp = () => $('#help-modal').classList.remove('hidden');
   $('#btn-help').onclick = openHelp;
   $('#btn-help2').onclick = openHelp;
