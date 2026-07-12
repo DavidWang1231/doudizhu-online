@@ -86,6 +86,10 @@ const Snd = (() => {
     bid() { tone(660, { dur: 0.09, gain: 0.16 }); tone(880, { dur: 0.12, gain: 0.16, delay: 0.08 }); },
     dbl() { tone(523, { dur: 0.09, gain: 0.16 }); tone(784, { dur: 0.12, gain: 0.16, delay: 0.07 }); },
     turn() { tone(988, { dur: 0.08, gain: 0.14 }); tone(1319, { dur: 0.13, gain: 0.14, delay: 0.09 }); },
+    landlord() {
+      [523, 659, 784].forEach((f, i) => tone(f, { dur: 0.12, gain: 0.18, delay: i * 0.09 }));
+      tone(1047, { dur: 0.3, gain: 0.2, delay: 0.27 });
+    },
     win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, { dur: 0.18, gain: 0.2, delay: i * 0.12 })); },
     lose() { [392, 330, 262].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.24, gain: 0.16, delay: i * 0.15 })); },
     chat() { tone(1200, { dur: 0.06, gain: 0.1 }); tone(1500, { dur: 0.08, gain: 0.08, delay: 0.05 }); },

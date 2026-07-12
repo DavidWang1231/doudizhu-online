@@ -11,6 +11,8 @@ const I18N = {
     m_classic_d: '1–3 人联机,空位由 AI 补',
     m_duel: '二人对决',
     m_duel_d: '1v1,17 张废牌不入局',
+    m_team: '四人 2v2',
+    m_team_d: '对家组队,每人 13 张',
     h_options: '房间选项',
     o_laizi: '癞子场',
     o_laizi_d: '每局随机一种牌当万能牌',
@@ -37,7 +39,9 @@ const I18N = {
     r_ai: 'AI 补位',
     r_host: '房主',
     g_landlord: '地主',
+    g_ally: '地主队友',
     g_farmer: '农民',
+    lord_banner: '{0} 成为地主!',
     g_bottom: '底牌',
     g_laizi: '癞子',
     g_mult: '倍数',
@@ -90,6 +94,8 @@ const I18N = {
 <p>经典三人:每人 17 张,叫分(1/2/3)最高者当地主并拿 3 张底牌。地主先出,先出完手牌的一方获胜。牌型:单张、对子、三条、三带一/二、顺子(≥5 张)、连对(≥3 对)、飞机(带翅膀)、四带二、炸弹、王炸。</p>
 <h3>二人对决</h3>
 <p>每人 17 张,地主拿 3 张底牌,剩余 17 张不入局。规则同三人。</p>
+<h3>四人 2v2</h3>
+<p>一副牌,每人 13 张。叫到地主后,地主的对家自动成为地主队友,2 张底牌归地主;任意一人先出完,全队获胜。该模式没有加倍阶段。</p>
 <h3>癞子场</h3>
 <p>每局随机指定一种牌为癞子(万能牌),可替代 3~2 的任意牌。单出的癞子只算本牌;含癞子的炸弹是"软炸",小于同点数的普通炸弹;4 张癞子一起打出为"癞子炸",大过一切炸弹(仅次于王炸)。含癞子的出牌自动按最强的解释来算。</p>
 <h3>不洗牌</h3>
@@ -97,7 +103,7 @@ const I18N = {
 <h3>计分</h3>
 <p>得分 = 底分 × 叫分 × 2^炸弹数 × 春天(×2) × 加倍。春天:地主打完时农民一张未出;反春:地主只出过第一手。</p>
 <h3>联机</h3>
-<p>创建房间后把 4 位房间码发给朋友(经典模式最多 2 位、二人对决 1 位),对方在首页输入即可加入,点对点直连。人数不足时空位由 AI 补齐;中途掉线也会由 AI 接管。</p>`,
+<p>创建房间后把 4 位房间码发给朋友(经典最多 2 位、2v2 最多 3 位、二人对决 1 位),对方在首页输入即可加入,点对点直连。人数不足时空位由 AI 补齐;中途掉线也会由 AI 接管。</p>`,
   },
   en: {
     title: 'Dou Dizhu Online',
@@ -108,6 +114,8 @@ const I18N = {
     m_classic_d: 'For 1–3 humans — AIs fill any empty seat',
     m_duel: 'Heads-up duel',
     m_duel_d: '1v1, 17 cards set aside',
+    m_team: '4P teams (2v2)',
+    m_team_d: 'Partners sit opposite, 13 cards each',
     h_options: 'Room options',
     o_laizi: 'Wildcard (Laizi)',
     o_laizi_d: 'One random rank is wild each round',
@@ -134,7 +142,9 @@ const I18N = {
     r_ai: 'AI seat',
     r_host: 'Host',
     g_landlord: 'Landlord',
+    g_ally: 'Landlord ally',
     g_farmer: 'Farmer',
+    lord_banner: '{0} is the landlord!',
     g_bottom: 'Kitty',
     g_laizi: 'Wild',
     g_mult: 'Multiplier',
@@ -187,6 +197,8 @@ const I18N = {
 <p>Classic 3P: 17 cards each; the highest bidder (1/2/3) becomes the landlord and takes the 3-card kitty. The landlord leads; first to empty their hand wins. Combos: single, pair, trio, trio+1/+2, straight (5+), pair straight (3+ pairs), plane (with wings), four+2, bomb, rocket.</p>
 <h3>Heads-up duel</h3>
 <p>17 cards each, the landlord takes the kitty, the remaining 17 cards stay out of play. Same combos as 3P.</p>
+<h3>4P teams (2v2)</h3>
+<p>One deck, 13 cards each. The bid winner's opposite seat becomes the landlord's ally and the 2-card kitty goes to the landlord; the first player to empty their hand wins for their whole team. No doubling phase in this mode.</p>
 <h3>Wildcard (Laizi)</h3>
 <p>Each round one random rank is wild and can stand in for any rank 3–2. A wild played alone counts as its own rank. A bomb containing wilds is a "soft bomb" and loses to the natural bomb of the same rank; four wilds together form the top bomb (only the rocket beats it). Wild plays are read as their strongest interpretation.</p>
 <h3>No-shuffle</h3>
@@ -194,7 +206,7 @@ const I18N = {
 <h3>Scoring</h3>
 <p>Score = base × bid × 2^bombs × spring (×2) × doubles. Spring: farmers never played; anti-spring: the landlord only played the first hand.</p>
 <h3>Online play</h3>
-<p>Create a room and send the 4-character code to your friends (up to 2 in Classic, 1 in Duel); they enter it on the home screen and connect peer-to-peer. AIs fill any empty seats and take over if someone disconnects.</p>`,
+<p>Create a room and send the 4-character code to your friends (up to 2 in Classic, 3 in 2v2, 1 in Duel); they enter it on the home screen and connect peer-to-peer. AIs fill any empty seats and take over if someone disconnects.</p>`,
   },
 };
 

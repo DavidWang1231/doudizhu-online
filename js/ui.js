@@ -84,6 +84,7 @@ function applyStaticTexts() {
   set('#t-name', 'h_name'); set('#t-mode', 'h_mode');
   set('#t-mclassic', 'm_classic'); set('#t-mclassic-d', 'm_classic_d');
   set('#t-mduel', 'm_duel'); set('#t-mduel-d', 'm_duel_d');
+  set('#t-mteam', 'm_team'); set('#t-mteam-d', 'm_team_d');
   set('#t-options', 'h_options');
   set('#t-olaizi', 'o_laizi'); set('#t-olaizi-d', 'o_laizi_d');
   set('#t-onoshuffle', 'o_noshuffle'); set('#t-onoshuffle-d', 'o_noshuffle_d');
@@ -133,7 +134,8 @@ function renderRoster(players) {
     `<span>${esc(p.name)}</span>${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}</div>`).join('');
 }
 
-function roomCapacity() { return App.cfg && App.cfg.mode === 'duel' ? 2 : 3; }
+function seatsForMode(mode) { return mode === 'duel' ? 2 : mode === 'team' ? 4 : 3; }
+function roomCapacity() { return App.cfg ? seatsForMode(App.cfg.mode) : 3; }
 
 function hostRosterPlayers() {
   const seats = [{ name: App.name, tag: t('r_host') }];
@@ -191,7 +193,7 @@ function startPractice() {
   App.cfg = cfgFromForm();
   App.role = 'local';
   const players = [{ name: App.name }];
-  const total = App.cfg.mode === 'duel' ? 2 : 3;
+  const total = seatsForMode(App.cfg.mode);
   while (players.length < total) players.push({ name: 'AI ' + players.length, isAI: true });
   newGame(players);
 }
@@ -358,8 +360,9 @@ function act(kind, data) {
 /* ---------------- game rendering ---------------- */
 
 function seatSides(v) {
-  // My seat at the bottom; previous player left, next player right (3P).
+  // My seat at the bottom; play order flows to the right.
   if (v.n === 2) return { left: null, right: null, top: (v.mySeat + 1) % 2 };
+  if (v.n === 4) return { left: (v.mySeat + 3) % 4, right: (v.mySeat + 1) % 4, top: (v.mySeat + 2) % 4 };
   return { left: (v.mySeat + 2) % 3, right: (v.mySeat + 1) % 3, top: null };
 }
 
@@ -381,11 +384,16 @@ function playAreaHTML(v, seat) {
     `<span class="combo-tag">${comboName(lp.combo)}</span>`;
 }
 
+function seatBadge(v, p) {
+  if (p.landlord) return `<span class="badge lord">👑 ${t('g_landlord')}</span>`;
+  if (p.ally) return `<span class="badge ally">🤝 ${t('g_ally')}</span>`;
+  return v.landlord != null ? `<span class="badge">${t('g_farmer')}</span>` : '';
+}
+
 function oppPanelHTML(v, seat) {
   const p = v.players[seat];
   const isTurn = v.actor === seat && (v.state === 'bidding' || v.state === 'doubling' || v.state === 'playing');
-  const badge = p.landlord ? `<span class="badge lord">👑 ${t('g_landlord')}</span>`
-    : (v.landlord != null ? `<span class="badge">${t('g_farmer')}</span>` : '');
+  const badge = seatBadge(v, p);
   const settleHand = p.hand && v.state === 'settle'
     ? `<div class="mini-cards reveal">${p.hand.map(c => cardHTML(c, 'mini', v.laizi)).join('')}</div>` : '';
   return `<div class="opp ${isTurn ? 'turn' : ''}" data-seat="${seat}">
@@ -423,8 +431,7 @@ function midHTML(v) {
 
 function myInfoHTML(v) {
   const p = v.players[v.mySeat];
-  const badge = p.landlord ? `<span class="badge lord">👑 ${t('g_landlord')}</span>`
-    : (v.landlord != null ? `<span class="badge">${t('g_farmer')}</span>` : '');
+  const badge = seatBadge(v, p);
   return `<span class="avatar">🧑</span><span class="pname">${esc(p.name)}</span> ${badge}
     <span class="pmeta">${t('score_pts', p.score)}</span><div class="bubble-slot"></div>`;
 }
@@ -538,14 +545,58 @@ function renderGame() {
   $('#actions').innerHTML = actionsHTML(v);
   $('#my-hand').innerHTML = v.myHand.map(c =>
     cardHTML(c, App.selected.has(c.id) ? 'sel' : '', v.laizi)).join('');
+  layoutHand();
   $('#my-info').innerHTML = myInfoHTML(v);
   $('#btn-chat').style.display = App.role === 'local' ? 'none' : '';
 
   bindActionButtons();
   renderBubbles();
 
+  if (v.landlord != null && App._lordSeen !== v.roundNo) {
+    App._lordSeen = v.roundNo;
+    animateLandlord(v);
+  }
+
   if (v.state === 'settle' && v.result) renderSettle(v);
   else $('#settle-overlay').classList.add('hidden');
+}
+
+/* Landlord reveal: banner + the kitty cards flying into the landlord's
+   hand (or seat panel). Purely cosmetic overlay clones. */
+function animateLandlord(v) {
+  Snd.landlord();
+  const banner = document.createElement('div');
+  banner.className = 'lord-banner';
+  banner.textContent = '👑 ' + t('lord_banner', v.players[v.landlord].name);
+  document.body.appendChild(banner);
+  setTimeout(() => banner.classList.add('show'), 20);
+  setTimeout(() => { banner.classList.remove('show'); setTimeout(() => banner.remove(), 400); }, 1800);
+
+  const srcCards = $$('#table-mid .bottom-cards .card');
+  const target = v.landlord === v.mySeat ? $('#my-hand')
+    : ($(`.opp[data-seat="${v.landlord}"]`) || $('#table-mid'));
+  if (!srcCards.length || !target) return;
+  const tr = target.getBoundingClientRect();
+  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+  srcCards.forEach((el, i) => {
+    const r = el.getBoundingClientRect();
+    const clone = el.cloneNode(true);
+    clone.classList.add('fly-card');
+    clone.style.left = r.left + 'px';
+    clone.style.top = r.top + 'px';
+    clone.style.width = r.width + 'px';
+    clone.style.height = r.height + 'px';
+    document.body.appendChild(clone);
+    requestAnimationFrame(() => {
+      clone.style.transform = 'scale(1.9)';
+      setTimeout(() => {
+        clone.style.transform =
+          `translate(${tx - (r.left + r.width / 2)}px, ${ty - (r.top + r.height / 2)}px) scale(.35)`;
+        clone.style.opacity = '0';
+      }, 650 + i * 130);
+    });
+    setTimeout(() => clone.remove(), 1700 + i * 130);
+  });
 }
 
 function bindActionButtons() {
@@ -557,12 +608,54 @@ function bindActionButtons() {
   if (pass) pass.onclick = () => { App.selected.clear(); act('pass'); };
   const play = $('#actions [data-act=play]');
   if (play) play.onclick = () => act('play', { ids: [...App.selected] });
-  $$('#my-hand .card').forEach(el => el.onclick = () => {
-    const id = +el.dataset.id;
-    if (App.selected.has(id)) App.selected.delete(id); else App.selected.add(id);
+}
+
+/* Drag across the hand to (de)select a run of cards; a plain tap still
+   toggles one card. Bound once in boot() — the hand element persists. */
+function bindHandDrag() {
+  const handEl = $('#my-hand');
+  let drag = null;
+  const cardIdAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    const c = el && el.closest('#my-hand .card');
+    return c ? +c.dataset.id : null;
+  };
+  const applySel = (id, on) => {
+    if (on) App.selected.add(id); else App.selected.delete(id);
     Snd.tick();
     renderGame();
+  };
+  handEl.addEventListener('pointerdown', e => {
+    const id = cardIdAt(e.clientX, e.clientY);
+    if (id === null) return;
+    e.preventDefault();
+    try { handEl.setPointerCapture(e.pointerId); } catch (err) { }
+    drag = { on: !App.selected.has(id), touched: new Set([id]) };
+    applySel(id, drag.on);
   });
+  handEl.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const id = cardIdAt(e.clientX, e.clientY);
+    if (id === null || drag.touched.has(id)) return;
+    drag.touched.add(id);
+    applySel(id, drag.on);
+  });
+  const end = () => { drag = null; };
+  handEl.addEventListener('pointerup', end);
+  handEl.addEventListener('pointercancel', end);
+}
+
+/* Compress card overlap so the whole hand always fits the screen. */
+function layoutHand() {
+  const handEl = $('#my-hand');
+  const cards = handEl.children;
+  const n = cards.length;
+  if (!n) return;
+  const cw = cards[0].offsetWidth;
+  const avail = handEl.clientWidth - 20;
+  let step = cw - (window.innerWidth <= 720 ? 22 : 30);
+  if (cw + step * (n - 1) > avail) step = Math.max(11, (avail - cw) / (n - 1));
+  for (let i = 1; i < n; i++) cards[i].style.marginLeft = (step - cw) + 'px';
 }
 
 function doHint() {
@@ -663,6 +756,8 @@ function goHome() {
   App.selected = new Set();
   App.bubbles = {};
   App._snd = null;
+  App._lordSeen = null;
+  App._hintSig = null;
   $('#settle-overlay').classList.add('hidden');
   $('#chat-pop').classList.add('hidden');
   showScreen('screen-home');
@@ -706,6 +801,9 @@ function boot() {
   $('#btn-bgm2').onclick = () => { Bgm.toggle(); setBgmBtns(); };
   // Browsers only allow audio after a user gesture; arm on any click.
   document.addEventListener('pointerdown', () => { Snd.unlock(); Bgm.poke(); });
+
+  bindHandDrag();
+  window.addEventListener('resize', () => { if (App.view) layoutHand(); });
   const openHelp = () => $('#help-modal').classList.remove('hidden');
   $('#btn-help').onclick = openHelp;
   $('#btn-help2').onclick = openHelp;

@@ -34,7 +34,7 @@ input:focus { border-color: #f5c04e; }
 }
 .field-label { font-size: 13px; color: rgba(238,244,238,.6); margin-top: 6px; }
 
-.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .mode-card {
   display: flex; flex-direction: column; gap: 4px; padding: 12px 14px;
   background: rgba(255,255,255,.06); border: 2px solid transparent; border-radius: 12px; cursor: pointer;
@@ -117,6 +117,7 @@ button.off { opacity: .38; text-decoration: line-through; }
   font-size: 10px; background: rgba(255,255,255,.15); border-radius: 6px; padding: 2px 6px; vertical-align: 1px;
 }
 .badge.lord { background: rgba(245,192,78,.3); color: #ffd67e; }
+.badge.ally { background: rgba(126,190,255,.25); color: #a9d4ff; }
 .opp-play { min-height: 46px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .say {
   background: rgba(255,255,255,.14); border-radius: 999px; padding: 4px 14px; font-size: 13px;
@@ -174,8 +175,9 @@ button.off { opacity: .38; text-decoration: line-through; }
 .status { font-size: 13px; color: rgba(238,244,238,.6); }
 
 #my-hand {
-  display: flex; justify-content: center; max-width: 100%; overflow-x: auto;
-  padding: 16px 10px 4px; -webkit-overflow-scrolling: touch;
+  display: flex; justify-content: center; width: 100%; max-width: 900px;
+  padding: 16px 10px 4px; overflow: visible;
+  touch-action: none; user-select: none; -webkit-user-select: none;
 }
 #my-hand .card { margin-left: -30px; cursor: pointer; }
 #my-hand .card:first-child { margin-left: 0; }
@@ -226,6 +228,22 @@ button.off { opacity: .38; text-decoration: line-through; }
 .total { color: rgba(238,244,238,.6); min-width: 64px; text-align: right; }
 
 /* ---------- toast & help ---------- */
+.fly-card {
+  position: fixed; z-index: 80; margin: 0 !important; pointer-events: none;
+  transition: transform .75s cubic-bezier(.45,-.15,.25,1), opacity .75s ease;
+  transform-origin: center;
+}
+.lord-banner {
+  position: fixed; top: 34%; left: 50%; z-index: 85; pointer-events: none;
+  transform: translate(-50%, -50%) scale(.6); opacity: 0;
+  background: linear-gradient(180deg, rgba(245,192,78,.95), rgba(224,158,38,.95));
+  color: #40290a; font-size: 26px; font-weight: 800; letter-spacing: 1px;
+  padding: 14px 34px; border-radius: 999px; box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  transition: transform .3s cubic-bezier(.2,1.6,.4,1), opacity .3s ease;
+  white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+}
+.lord-banner.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+
 #toast-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .toast {
   background: rgba(20,30,22,.95); border: 1px solid rgba(255,255,255,.25); color: #eef4ee;
@@ -255,7 +273,6 @@ button.off { opacity: .38; text-decoration: line-through; }
   .card { width: 46px; height: 66px; padding: 3px 4px; }
   .card .cr { font-size: 15px; }
   .card .cs { font-size: 13px; }
-  #my-hand { justify-content: flex-start; }
   #my-hand .card { margin-left: -22px; }
   .card.mini { width: 28px; height: 42px; }
   .card.mini .cr { font-size: 11px; }

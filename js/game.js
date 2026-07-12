@@ -8,12 +8,16 @@ if (typeof require !== 'undefined' && typeof window === 'undefined') {
 }
 
 class Game {
-  /* cfg = { mode:'classic'|'duel', laizi, noShuffle, doubling, base,
-             aiDelay, players:[{name, isAI}] } */
+  /* cfg = { mode:'classic'|'duel'|'team', laizi, noShuffle, doubling, base,
+             aiDelay, players:[{name, isAI}] }
+     'team' is 2v2: four players, partners sit opposite; the bid winner's
+     partner joins the landlord side. 13 cards each, a 2-card kitty. */
   constructor(cfg, hooks) {
     this.cfg = Object.assign({ mode: 'classic', laizi: false, noShuffle: false, doubling: true, base: 1, aiDelay: 900 }, cfg);
     this.hooks = hooks || {};
-    this.n = this.cfg.mode === 'duel' ? 2 : 3;
+    this.n = this.cfg.mode === 'duel' ? 2 : this.cfg.mode === 'team' ? 4 : 3;
+    this.handSize = this.cfg.mode === 'team' ? 13 : 17;
+    this.bottomSize = this.cfg.mode === 'team' ? 2 : 3;
     this.players = this.cfg.players.map(p => ({ name: p.name, isAI: !!p.isAI }));
     this.scores = Array(this.n).fill(0);
     this.wins = Array(this.n).fill(0);
@@ -37,19 +41,20 @@ class Game {
     const n = this.n;
     const deck = this.cfg.noShuffle ? clumpedDeck() : shuffle(makeDeck());
     const hands = Array.from({ length: n }, () => []);
+    const hs = this.handSize, bs = this.bottomSize;
     if (this.cfg.noShuffle) {
       let p = 0;
-      while (hands.some(h => h.length < 17)) {
-        const need = 17 - hands[p].length;
+      while (hands.some(h => h.length < hs)) {
+        const need = hs - hands[p].length;
         if (need > 0) hands[p].push(...deck.splice(0, Math.min(need, 1 + Math.floor(Math.random() * 3))));
         p = (p + 1) % n;
       }
-      this.bottom = deck.splice(0, 3);
+      this.bottom = deck.splice(0, bs);
       this.dead = deck;
     } else {
-      for (let i = 0; i < n; i++) hands[i] = deck.slice(i * 17, (i + 1) * 17);
-      this.bottom = deck.slice(n * 17, n * 17 + 3);
-      this.dead = deck.slice(n * 17 + 3);
+      for (let i = 0; i < n; i++) hands[i] = deck.slice(i * hs, (i + 1) * hs);
+      this.bottom = deck.slice(n * hs, n * hs + bs);
+      this.dead = deck.slice(n * hs + bs);
     }
     this.hands = hands;
     this.hands.forEach(h => this.sortHand(h));
@@ -161,12 +166,18 @@ class Game {
     return true;
   }
 
+  /* Is this seat on the landlord's side? (In 2v2 the opposite seat allies.) */
+  onLandlordSide(s) {
+    return s === this.landlord || (this.n === 4 && s === (this.landlord + 2) % this.n);
+  }
+
   setLandlord() {
     this.redealStreak = 0;
     this.landlord = this.bidWinner;
     this.hands[this.landlord].push(...this.bottom);
     this.sortHand(this.hands[this.landlord]);
-    if (this.cfg.doubling) {
+    // No doubling stage in 2v2: per-pair stakes don't stay zero-sum there.
+    if (this.cfg.doubling && this.n < 4) {
       this.state = 'doubling';
     } else {
       this.beginPlay();
@@ -228,28 +239,35 @@ class Game {
   settle(winnerSeat) {
     this.state = 'settle';
     const L = this.landlord;
-    const landlordWon = winnerSeat === L;
-    let farmerPlays = 0;
-    for (let s = 0; s < this.n; s++) if (s !== L) farmerPlays += this.playsCount[s];
-    const spring = landlordWon && farmerPlays === 0;
-    const anti = !landlordWon && this.playsCount[L] === 1;
+    const landlordWon = this.onLandlordSide(winnerSeat);
+    let loserPlays = 0, landlordSidePlays = 0;
+    for (let s = 0; s < this.n; s++) {
+      if (this.onLandlordSide(s)) landlordSidePlays += this.playsCount[s];
+      if (this.onLandlordSide(s) !== landlordWon) loserPlays += this.playsCount[s];
+    }
+    const spring = landlordWon && loserPlays === 0;
+    const anti = !landlordWon && landlordSidePlays === 1;
     const mult = Math.pow(2, this.bombsUsed) * ((spring || anti) ? 2 : 1);
     const unit = this.cfg.base * this.bid * mult;
     const deltas = Array(this.n).fill(0);
-    for (let f = 0; f < this.n; f++) {
-      if (f === L) continue;
-      let pair = unit;
-      if (this.cfg.doubling) {
-        if (this.doubles[L]) pair *= 2;
-        if (this.doubles[f]) pair *= 2;
+    if (this.n === 4) {
+      for (let s = 0; s < this.n; s++)
+        deltas[s] = this.onLandlordSide(s) === landlordWon ? unit : -unit;
+    } else {
+      for (let f = 0; f < this.n; f++) {
+        if (f === L) continue;
+        let pair = unit;
+        if (this.cfg.doubling) {
+          if (this.doubles[L]) pair *= 2;
+          if (this.doubles[f]) pair *= 2;
+        }
+        if (landlordWon) { deltas[f] -= pair; deltas[L] += pair; }
+        else { deltas[f] += pair; deltas[L] -= pair; }
       }
-      if (landlordWon) { deltas[f] -= pair; deltas[L] += pair; }
-      else { deltas[f] += pair; deltas[L] -= pair; }
     }
     for (let s = 0; s < this.n; s++) this.scores[s] += deltas[s];
     for (let s = 0; s < this.n; s++) {
-      const won = landlordWon ? s === L : s !== L;
-      if (won) this.wins[s]++;
+      if (this.onLandlordSide(s) === landlordWon) this.wins[s]++;
     }
     this.result = {
       winner: winnerSeat, landlordWon, deltas, mult, spring, anti,
@@ -291,6 +309,7 @@ class Game {
         isAI: p.isAI,
         cardCount: this.hands ? this.hands[i].length : 0,
         landlord: i === this.landlord,
+        ally: this.landlord != null && this.n === 4 && i === (this.landlord + 2) % this.n,
         bid: this.bids ? this.bids[i] : null,
         dbl: this.doubles ? this.doubles[i] : null,
         score: this.scores[i],

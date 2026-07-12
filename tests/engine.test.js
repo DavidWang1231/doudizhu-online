@@ -120,7 +120,8 @@ ok(mv4.some(m => m.combo.type === 'straight'), 'wild-assisted straight generated
 // ---------- full AI simulation ----------
 function simulate(cfg, rounds) {
   const errors = [];
-  const players = Array.from({ length: cfg.mode === 'duel' ? 2 : 3 }, (_, i) => ({ name: 'AI' + i, isAI: true }));
+  const seats = cfg.mode === 'duel' ? 2 : cfg.mode === 'team' ? 4 : 3;
+  const players = Array.from({ length: seats }, (_, i) => ({ name: 'AI' + i, isAI: true }));
   const g = new Game(Object.assign({ aiDelay: 0, players }, cfg), {
     onError: e => errors.push(e),
   });
@@ -143,11 +144,28 @@ const configs = [
   { mode: 'classic', laizi: true, noShuffle: true, doubling: false, base: 3 },
   { mode: 'duel' },
   { mode: 'duel', laizi: true, noShuffle: true },
+  { mode: 'team' },
+  { mode: 'team', laizi: true, noShuffle: true },
 ];
 for (const cfg of configs) {
   const t0 = Date.now();
   simulate(cfg, 120);
   console.log(`sim ok: ${JSON.stringify(cfg)} 120 rounds in ${Date.now() - t0}ms`);
+}
+
+// ---------- 2v2 team settle sanity ----------
+{
+  const g = simulate({ mode: 'team' }, 1);
+  const r = g.result;
+  const L = g.landlord, ally = (L + 2) % 4;
+  const lw = r.winner === L || r.winner === ally;
+  ok(r.landlordWon === lw, 'team result matches winner side');
+  ok(r.deltas[L] === r.deltas[ally], 'landlord and ally share the outcome');
+  const others = [0, 1, 2, 3].filter(s => s !== L && s !== ally);
+  ok(r.deltas[others[0]] === r.deltas[others[1]], 'defenders share the outcome');
+  ok(r.deltas[L] === -r.deltas[others[0]], 'team deltas are mirrored');
+  ok(g.hands.every ? true : true, 'noop');
+  ok(g.handSize === 13 && g.bottomSize === 2, 'team deal is 13 cards + 2 kitty');
 }
 
 if (failures) { console.error(`\n${failures} FAILURES`); process.exit(1); }

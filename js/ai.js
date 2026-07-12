@@ -53,8 +53,10 @@ function aiPlay(ctx) {
     return best;
   }
 
-  const iAmFarmer = mySeat !== landlordSeat;
-  const partnerLed = nPlayers === 3 && iAmFarmer && prevSeat !== landlordSeat && prevSeat !== mySeat;
+  // Sides: in 2v2 the landlord's opposite seat is an ally; 3P farmers ally.
+  const side = s => (s === landlordSeat || (nPlayers === 4 && s === (landlordSeat + 2) % 4)) ? 1 : 0;
+  const mySide = side(mySeat);
+  const partnerLed = prevSeat !== null && prevSeat !== mySeat && side(prevSeat) === mySide;
   const normal = moves.filter(m => !isBomb(m));
 
   if (partnerLed) {
@@ -74,10 +76,7 @@ function aiPlay(ctx) {
   }
 
   const enemies = [];
-  for (let s = 0; s < nPlayers; s++) {
-    if (s === mySeat) continue;
-    if (iAmFarmer ? s === landlordSeat : true) enemies.push(s);
-  }
+  for (let s = 0; s < nPlayers; s++) if (side(s) !== mySide) enemies.push(s);
   const enemyMin = Math.min(...enemies.map(s => cardCounts[s]));
   if (enemyMin <= 5 || hand.length <= 6) {
     const bombs = moves.filter(isBomb).sort((a, b) => (a.combo.power || 0) - (b.combo.power || 0));
