@@ -568,8 +568,13 @@ function bindActionButtons() {
 function doHint() {
   const v = App.view;
   const prev = prevFor(v);
-  const mv = pickHint(v.myHand.map(c => c.r), v.laizi, prev);
-  if (!mv) { if (prev) { App.selected.clear(); act('pass'); } return; }
+  const moves = hintMoves(v.myHand.map(c => c.r), v.laizi, prev);
+  if (!moves.length) { if (prev) { App.selected.clear(); act('pass'); } return; }
+  // Repeated presses in the same situation cycle through the options.
+  const sig = JSON.stringify([v.roundNo, v.trick.seat, prev && prev.type, prev && prev.rank, v.myHand.length]);
+  if (App._hintSig !== sig) { App._hintSig = sig; App._hintIdx = 0; }
+  const mv = moves[App._hintIdx % moves.length];
+  App._hintIdx++;
   const cards = materialize(v.myHand, mv.play, v.laizi);
   if (!cards) return;
   App.selected = new Set(cards.map(c => c.id));

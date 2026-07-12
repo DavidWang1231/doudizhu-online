@@ -29,14 +29,7 @@ function aiDouble(handRanks, isLandlord, laizi) {
   return handStrength(handRanks, laizi) >= (isLandlord ? 9 : 6.5);
 }
 
-function usesBrokenBomb(mv, handCounts) {
-  const w = counts(mv.play);
-  for (const rs of Object.keys(w)) {
-    const r = +rs;
-    if (handCounts[r] === 4 && w[r] < 4) return true;
-  }
-  return false;
-}
+/* Group-breaking cost comes from moves.js (breakPenalty). */
 
 /* Decide a play. ctx = {hand, laizi, prev, prevSeat, mySeat, landlordSeat,
    cardCounts, nPlayers}. Returns a move {play, wild, combo} or null (pass). */
@@ -53,8 +46,7 @@ function aiPlay(ctx) {
     for (const m of moves) {
       let s = m.combo.rank * 3 - m.play.length * 4 + m.wild * 40;
       if (isBomb(m)) s += hand.length <= 6 ? -40 : 1000;
-      else if (usesBrokenBomb(m, hc)) s += 500;
-      if (m.combo.type === 'single' && (hc[m.combo.rank] || 0) >= 2) s += 6;
+      else s += breakPenalty(m.play, hc, laizi) * 30;
       if (m.combo.rank >= 15) s += 12;
       if (s < bestScore) { bestScore = s; best = m; }
     }
@@ -68,7 +60,7 @@ function aiPlay(ctx) {
   if (partnerLed) {
     if (prev.rank >= 12 || cardCounts[prevSeat] <= 3) return null;
     const mild = normal
-      .filter(m => m.wild === 0 && m.combo.rank <= 11 && !usesBrokenBomb(m, hc))
+      .filter(m => m.wild === 0 && m.combo.rank <= 11 && breakPenalty(m.play, hc, laizi) === 0)
       .sort((a, b) => a.combo.rank - b.combo.rank);
     return mild[0] || null;
   }
@@ -76,7 +68,7 @@ function aiPlay(ctx) {
   if (normal.length) {
     normal.sort((a, b) =>
       (a.wild - b.wild) ||
-      (usesBrokenBomb(a, hc) - usesBrokenBomb(b, hc)) ||
+      (breakPenalty(a.play, hc, laizi) - breakPenalty(b.play, hc, laizi)) ||
       (a.combo.rank - b.combo.rank));
     return normal[0];
   }

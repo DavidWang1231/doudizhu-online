@@ -96,6 +96,27 @@ ok(mv4.some(m => m.combo.type === 'straight'), 'wild-assisted straight generated
   ok(nat && nat[0].id === 5, 'natural pick');
 }
 
+// ---------- hint / AI must not break groups needlessly ----------
+{
+  // David's case: pair of 4s led; hand has 555 and 66 -> answer 66, not 55.
+  const prevPair4 = detectPlain([4, 4]);
+  const h1 = hintMoves([5, 5, 5, 6, 6], null, prevPair4);
+  eq(h1[0].combo.rank, 6, 'hint prefers intact pair 66 over breaking 555');
+  const aiMv = aiPlay({
+    hand: [5, 5, 5, 6, 6], laizi: null, prev: prevPair4, prevSeat: 0,
+    mySeat: 1, landlordSeat: 0, cardCounts: [10, 5, 10], nPlayers: 3,
+  });
+  eq(aiMv.combo.rank, 6, 'AI prefers intact pair 66 over breaking 555');
+  // Lone single preferred over tearing a pair, even at higher rank.
+  const h2 = hintMoves([9, 9, 8], null, detectPlain([5]));
+  eq(h2[0].combo.rank, 8, 'hint prefers lone 8 over breaking pair of 9s');
+  // But when breaking is the only answer, it still answers.
+  const h3 = hintMoves([5, 5, 5], null, prevPair4);
+  eq(h3[0].combo.rank, 5, 'hint still breaks trio when forced');
+  eq(breakPenalty([5, 5], counts([5, 5, 5]), null), 3, 'break penalty on torn trio');
+  eq(breakPenalty([5, 5], counts([5, 5, 9]), null), 0, 'no penalty for intact pair');
+}
+
 // ---------- full AI simulation ----------
 function simulate(cfg, rounds) {
   const errors = [];

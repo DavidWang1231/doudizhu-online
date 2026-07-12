@@ -259,16 +259,41 @@ function materialize(handCards, play, laizi) {
   return res;
 }
 
-/* Cheapest sensible play, used by the hint button. */
-function pickHint(handRanks, laizi, prev) {
+/* Cost of tearing apart hand groups: using only part of a pair/trio/bomb
+   is penalized by the group's size, so intact plays are always preferred
+   (e.g. answer a pair with a loose pair, not two cards off a trio). */
+function breakPenalty(play, handCounts, laizi) {
+  const want = counts(play);
+  let pen = 0;
+  for (const rs of Object.keys(want)) {
+    const r = +rs;
+    if (laizi && r === laizi) continue; // wilds are individually flexible
+    const h = handCounts[r] || 0;
+    const used = Math.min(want[r], h);
+    if (used > 0 && used < h && h >= 2) pen += h;
+  }
+  return pen;
+}
+
+/* All sensible plays for the hint button, best first: no bombs before
+   normal answers, fewest wilds, least group-breaking, then lowest rank.
+   The UI cycles through this list on repeated presses. */
+function hintMoves(handRanks, laizi, prev) {
+  const hc = counts(handRanks);
   const moves = legalMoves(handRanks, laizi, prev);
-  if (!moves.length) return null;
   const isBomb = m => m.combo.type === 'bomb' || m.combo.type === 'rocket';
   moves.sort((a, b) =>
-    (isBomb(a) - isBomb(b)) || (a.wild - b.wild) || (a.combo.rank - b.combo.rank) || (a.play.length - b.play.length));
-  return moves[0];
+    (isBomb(a) - isBomb(b)) || (a.wild - b.wild) ||
+    (breakPenalty(a.play, hc, laizi) - breakPenalty(b.play, hc, laizi)) ||
+    (a.combo.rank - b.combo.rank) || (a.play.length - b.play.length));
+  return moves;
+}
+
+/* Cheapest sensible play (first hint). */
+function pickHint(handRanks, laizi, prev) {
+  return hintMoves(handRanks, laizi, prev)[0] || null;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { natCounts, pickWings, realizeRanks, legalMoves, materialize, pickHint };
+  module.exports = { natCounts, pickWings, realizeRanks, legalMoves, materialize, breakPenalty, hintMoves, pickHint };
 }
