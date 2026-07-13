@@ -256,23 +256,32 @@ function createRoom(attempt) {
   App.role = 'host';
   App.code = makeRoomCode();
   setCreateBusy(true);
+  const sess = App._netSession || 0;
+  const alive = () => (App._netSession || 0) === sess && App.role === 'host';
   App._joinTimer = setTimeout(() => {
     App._joinTimer = null;
     toast(t('e_timeout'));
     goHome();
   }, 12000);
+  let myPeer = null;
   createHostPeer(App.code, {
-    onReady: () => { clearJoinTimer(); setCreateBusy(false); showScreen('screen-room'); updateRoomScreen(); startHeartbeat(); },
+    onReady: () => {
+      if (!alive()) return;
+      clearJoinTimer(); setCreateBusy(false);
+      showScreen('screen-room'); updateRoomScreen(); startHeartbeat();
+    },
     onCodeTaken: () => {
+      if (!alive()) return;
       clearJoinTimer();
-      App.peer.destroy();
+      try { if (myPeer) myPeer.destroy(); } catch (e) { }
       if ((attempt || 0) < 3) createRoom((attempt || 0) + 1);
       else { setCreateBusy(false); toast(t('e_conn')); }
     },
-    onError: () => { clearJoinTimer(); setCreateBusy(false); toast(t('e_net')); goHome(); },
-    onConnection: (conn) => hostAcceptConn(conn),
+    onError: () => { if (!alive()) return; clearJoinTimer(); setCreateBusy(false); toast(t('e_net')); goHome(); },
+    onConnection: (conn) => { if (alive()) hostAcceptConn(conn); },
   }).then(p => {
-    if (App.role !== 'host') { try { p.destroy(); } catch (e) { } return; }
+    myPeer = p;
+    if (!alive()) { try { p.destroy(); } catch (e) { } return; }
     App.peer = p;
   });
 }
@@ -387,6 +396,8 @@ function joinRoom() {
   App.role = 'guest';
   App.code = code;
   setJoinBusy(true);
+  const sess = App._netSession || 0;
+  const alive = () => (App._netSession || 0) === sess && App.role === 'guest';
   App._joinTimer = setTimeout(() => {
     App._joinTimer = null;
     toast(t('e_timeout'));
@@ -394,6 +405,7 @@ function joinRoom() {
   }, 12000);
   createGuestPeer(code, {
     onOpen: (conn) => {
+      if (!alive()) return;
       clearJoinTimer();
       App.guestConn = conn;
       App._hostSeen = Date.now();
@@ -405,12 +417,12 @@ function joinRoom() {
       $('#btn-start').style.display = 'none';
       renderRoster([]);
     },
-    onData: (d) => guestOnData(d),
-    onClose: () => { if (App.role === 'guest') { toast(t('e_hostleft')); goHome(); } },
-    onNotFound: () => { clearJoinTimer(); toast(t('e_room404')); goHome(); },
-    onError: () => { clearJoinTimer(); toast(t('e_conn')); goHome(); },
+    onData: (d) => { if (alive()) guestOnData(d); },
+    onClose: () => { if (alive()) { toast(t('e_hostleft')); goHome(); } },
+    onNotFound: () => { if (!alive()) return; clearJoinTimer(); toast(t('e_room404')); goHome(); },
+    onError: () => { if (!alive()) return; clearJoinTimer(); toast(t('e_conn')); goHome(); },
   }).then(p => {
-    if (App.role !== 'guest') { try { p.destroy(); } catch (e) { } return; }
+    if (!alive()) { try { p.destroy(); } catch (e) { } return; }
     App.peer = p;
   });
 }
@@ -874,9 +886,15 @@ function renderSettle(v) {
 function goHome() {
   sendBye();
   stopHeartbeat();
+  App._netSession = (App._netSession || 0) + 1;
   App._hostSeen = null;
   if (App.game) { App.game.stop(); App.game = null; }
-  if (App.peer) { try { App.peer.destroy(); } catch (e) { } App.peer = null; }
+  if (App.peer) {
+    // Let the bye message flush before tearing the connection down.
+    const peer = App.peer;
+    App.peer = null;
+    setTimeout(() => { try { peer.destroy(); } catch (e) { } }, 300);
+  }
   App.role = null;
   App.conns = {};
   App.guests = [];
