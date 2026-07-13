@@ -200,20 +200,33 @@ function startPractice() {
   newGame(players);
 }
 
+function setCreateBusy(busy) {
+  const btn = $('#btn-create');
+  btn.disabled = busy;
+  $('#t-bcreate').textContent = busy ? t('connecting') : t('b_create');
+}
+
 function createRoom(attempt) {
   if (!netAvailable()) { toast(t('e_net')); return; }
   App.name = myName();
   App.cfg = cfgFromForm();
   App.role = 'host';
   App.code = makeRoomCode();
+  setCreateBusy(true);
+  App._joinTimer = setTimeout(() => {
+    App._joinTimer = null;
+    toast(t('e_timeout'));
+    goHome();
+  }, 12000);
   App.peer = createHostPeer(App.code, {
-    onReady: () => { showScreen('screen-room'); updateRoomScreen(); },
+    onReady: () => { clearJoinTimer(); setCreateBusy(false); showScreen('screen-room'); updateRoomScreen(); },
     onCodeTaken: () => {
+      clearJoinTimer();
       App.peer.destroy();
       if ((attempt || 0) < 3) createRoom((attempt || 0) + 1);
-      else toast(t('e_conn'));
+      else { setCreateBusy(false); toast(t('e_conn')); }
     },
-    onError: () => { toast(t('e_net')); goHome(); },
+    onError: () => { clearJoinTimer(); setCreateBusy(false); toast(t('e_net')); goHome(); },
     onConnection: (conn) => hostAcceptConn(conn),
   });
 }
@@ -303,6 +316,17 @@ function hostChat(seat, id) {
 
 /* ---------------- guest plumbing ---------------- */
 
+function setJoinBusy(busy) {
+  const btn = $('#btn-join');
+  btn.disabled = busy;
+  btn.textContent = busy ? t('connecting') : t('b_join');
+}
+
+function clearJoinTimer() {
+  if (App._joinTimer) { clearTimeout(App._joinTimer); App._joinTimer = null; }
+  setJoinBusy(false);
+}
+
 function joinRoom() {
   if (!netAvailable()) { toast(t('e_net')); return; }
   const code = $('#inp-code').value.trim().toUpperCase();
@@ -310,8 +334,15 @@ function joinRoom() {
   App.name = myName();
   App.role = 'guest';
   App.code = code;
+  setJoinBusy(true);
+  App._joinTimer = setTimeout(() => {
+    App._joinTimer = null;
+    toast(t('e_timeout'));
+    goHome();
+  }, 12000);
   App.peer = createGuestPeer(code, {
     onOpen: (conn) => {
+      clearJoinTimer();
       App.guestConn = conn;
       conn.send({ t: 'hello', name: App.name });
       showScreen('screen-room');
@@ -322,8 +353,8 @@ function joinRoom() {
     },
     onData: (d) => guestOnData(d),
     onClose: () => { if (App.role === 'guest') { toast(t('e_hostleft')); goHome(); } },
-    onNotFound: () => { toast(t('e_room404')); goHome(); },
-    onError: () => { toast(t('e_conn')); goHome(); },
+    onNotFound: () => { clearJoinTimer(); toast(t('e_room404')); goHome(); },
+    onError: () => { clearJoinTimer(); toast(t('e_conn')); goHome(); },
   });
 }
 
@@ -775,6 +806,9 @@ function goHome() {
   App._lordSeen = null;
   App._hintSig = null;
   App._beatSig = null;
+  if (App._joinTimer) { clearTimeout(App._joinTimer); App._joinTimer = null; }
+  setJoinBusy(false);
+  setCreateBusy(false);
   $('#settle-overlay').classList.add('hidden');
   $('#chat-pop').classList.add('hidden');
   showScreen('screen-home');

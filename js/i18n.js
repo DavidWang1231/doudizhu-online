@@ -28,6 +28,7 @@ const I18N = {
     h_join: '加入朋友的房间',
     ph_code: '输入房间码',
     b_join: '加入',
+    connecting: '连接中…',
     b_help: '玩法说明',
     tt_bgm: '背景音乐',
     tt_snd: '音效',
@@ -81,6 +82,7 @@ const I18N = {
     e_invalid: '不符合规则,换个出法',
     e_room404: '房间不存在,检查一下房间码',
     e_conn: '连接失败,请重试',
+    e_timeout: '连接超时:请勿在微信内置浏览器打开,双方换用浏览器或切换网络(如 4G/5G)再试',
     e_net: '联机服务初始化失败(单机练习不受影响)',
     e_full: '房间已满或游戏已开始',
     e_disconnected: '{0} 掉线,已由 AI 接管',
@@ -104,7 +106,7 @@ const I18N = {
 <h3>计分</h3>
 <p>得分 = 底分 × 叫分 × 2^炸弹数 × 春天(×2) × 加倍。春天:地主打完时农民一张未出;反春:地主只出过第一手。</p>
 <h3>联机</h3>
-<p>创建房间后把 4 位房间码发给朋友(经典模式最多 2 位、二人对决 1 位),对方在首页输入即可加入,点对点直连。人数不足时空位由 AI 补齐;中途掉线也会由 AI 接管。</p>`,
+<p>创建房间后把 4 位房间码发给朋友(经典模式最多 2 位、二人对决 1 位),对方在首页输入即可加入,点对点直连。人数不足时空位由 AI 补齐;中途掉线也会由 AI 接管。</p>\n<p>连不上时:不要在微信/QQ 内置浏览器里打开(用 Safari/Chrome);公司或校园网络可能拦截联机,换手机流量试试;还不行就双方各刷新一次重新建房。</p>`,
   },
   en: {
     title: 'Dou Dizhu Online',
@@ -132,6 +134,7 @@ const I18N = {
     h_join: "Join a friend's room",
     ph_code: 'Enter room code',
     b_join: 'Join',
+    connecting: 'Connecting…',
     b_help: 'How to play',
     tt_bgm: 'Background music',
     tt_snd: 'Sound effects',
@@ -185,6 +188,7 @@ const I18N = {
     e_invalid: "That doesn't work — try another play",
     e_room404: 'Room not found — check the code',
     e_conn: 'Connection failed, please retry',
+    e_timeout: 'Connection timed out — avoid in-app browsers (e.g. WeChat) and try another network (4G/5G)',
     e_net: 'Online service unavailable (practice mode still works)',
     e_full: 'Room is full or the game already started',
     e_disconnected: '{0} disconnected — an AI took over',
@@ -208,7 +212,7 @@ const I18N = {
 <h3>Scoring</h3>
 <p>Score = base × bid × 2^bombs × spring (×2) × doubles. Spring: farmers never played; anti-spring: the landlord only played the first hand.</p>
 <h3>Online play</h3>
-<p>Create a room and send the 4-character code to your friends (up to 2 in Classic, 1 in Duel); they enter it on the home screen and connect peer-to-peer. AIs fill any empty seats and take over if someone disconnects.</p>`,
+<p>Create a room and send the 4-character code to your friends (up to 2 in Classic, 1 in Duel); they enter it on the home screen and connect peer-to-peer. AIs fill any empty seats and take over if someone disconnects.</p>\n<p>If you can't connect: open the site in a real browser (not an in-app webview), try a different network such as 4G/5G — some corporate networks block peer-to-peer — and re-create the room after refreshing both sides.</p>`,
   },
 };
 
