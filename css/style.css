@@ -187,6 +187,7 @@ button.off { opacity: .38; text-decoration: line-through; }
 }
 .act-btn:disabled { opacity: .4; cursor: default; }
 .act-btn.primary { background: linear-gradient(180deg, #f7ca5e, #eda93a); color: #4a3006; }
+.act-btn.noplay { background: rgba(255,255,255,.08); color: rgba(238,244,238,.75); padding: 10px 34px; }
 .combo-preview { font-size: 13px; color: #ffd67e; }
 .status { font-size: 13px; color: rgba(238,244,238,.6); }
 

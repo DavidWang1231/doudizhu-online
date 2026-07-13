@@ -455,6 +455,9 @@ function actionsHTML(v) {
   if (v.state === 'playing') {
     if (!mine) return statusHTML(v);
     const prev = prevFor(v);
+    if (prev && !canBeat(v)) {
+      return `<button class="act-btn noplay" data-act="pass">${t('cant_beat')}</button>`;
+    }
     const sel = v.myHand.filter(c => App.selected.has(c.id));
     let combo = null;
     if (sel.length) {
@@ -467,6 +470,17 @@ function actionsHTML(v) {
       `<button class="act-btn primary" data-act="play" ${combo ? '' : 'disabled'}>${t('b_play')}</button>`;
   }
   return '';
+}
+
+/* Is there any legal answer to the current trick? Memoized per situation
+   so re-renders (card clicks, bubbles) don't recompute move generation. */
+function canBeat(v) {
+  const c = v.trick.combo;
+  const sig = [v.roundNo, v.trick.seat, c && c.type, c && c.rank, c && c.n, v.myHand.length].join('|');
+  if (App._beatSig === sig) return App._beatHas;
+  App._beatSig = sig;
+  App._beatHas = legalMoves(v.myHand.map(x => x.r), v.laizi, prevFor(v)).length > 0;
+  return App._beatHas;
 }
 
 function statusHTML(v) {
@@ -760,6 +774,7 @@ function goHome() {
   App._snd = null;
   App._lordSeen = null;
   App._hintSig = null;
+  App._beatSig = null;
   $('#settle-overlay').classList.add('hidden');
   $('#chat-pop').classList.add('hidden');
   showScreen('screen-home');
