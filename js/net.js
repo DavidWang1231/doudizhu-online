@@ -19,7 +19,7 @@ const STUN_SERVERS = [
    and paste your credentials URL here, e.g.
    'https://YOURAPP.metered.live/api/v1/turn/credentials?apiKey=YOURKEY'
    The fetched servers are merged in front of the STUN list. */
-const TURN_CREDENTIALS_URL = '';
+const TURN_CREDENTIALS_URL = 'https://doudizhu-online.metered.live/api/v1/turn/credentials?apiKey=69960ccff638874fa5ab1dcb405d13b1097f';
 
 let iceCache = null;
 async function getIceServers() {
