@@ -161,6 +161,48 @@ function sendRoomInfo() {
   }
 }
 
+/* ---------------- liveness (heartbeat) ----------------
+   WebRTC close events are unreliable when a tab is killed or a phone is
+   locked, so both sides ping every 5s; 40s of silence means gone. */
+
+const HEARTBEAT_MS = 5000;
+const PEER_TIMEOUT_MS = 40000;
+
+function startHeartbeat() {
+  stopHeartbeat();
+  App._hb = setInterval(() => {
+    const now = Date.now();
+    if (App.role === 'host') {
+      for (const g of App.guests.slice()) {
+        if (!g.conn) continue;
+        try { g.conn.send({ t: 'ping' }); } catch (e) { }
+        if (g.lastSeen && now - g.lastSeen > PEER_TIMEOUT_MS) {
+          const conn = g.conn;
+          try { conn.close(); } catch (e) { }
+          hostOnGuestGone(conn);
+        }
+      }
+    } else if (App.role === 'guest' && App.guestConn) {
+      try { App.guestConn.send({ t: 'ping' }); } catch (e) { }
+      if (App._hostSeen && now - App._hostSeen > PEER_TIMEOUT_MS) {
+        toast(t('e_hostleft'));
+        goHome();
+      }
+    }
+  }, HEARTBEAT_MS);
+}
+
+function stopHeartbeat() {
+  if (App._hb) { clearInterval(App._hb); App._hb = null; }
+}
+
+function sendBye() {
+  try {
+    if (App.role === 'guest' && App.guestConn) App.guestConn.send({ t: 'bye' });
+    if (App.role === 'host') for (const g of App.guests) { if (g.conn) g.conn.send({ t: 'bye' }); }
+  } catch (e) { }
+}
+
 /* ---------------- host / local game plumbing ---------------- */
 
 function sendAll(msg) {
@@ -220,7 +262,7 @@ function createRoom(attempt) {
     goHome();
   }, 12000);
   createHostPeer(App.code, {
-    onReady: () => { clearJoinTimer(); setCreateBusy(false); showScreen('screen-room'); updateRoomScreen(); },
+    onReady: () => { clearJoinTimer(); setCreateBusy(false); showScreen('screen-room'); updateRoomScreen(); startHeartbeat(); },
     onCodeTaken: () => {
       clearJoinTimer();
       App.peer.destroy();
@@ -251,13 +293,17 @@ function hostAcceptConn(conn) {
 
 function hostOnData(conn, d) {
   if (!d || typeof d !== 'object') return;
+  const known = App.guests.find(g => g.conn === conn);
+  if (known) known.lastSeen = Date.now();
+  if (d.t === 'ping') return;
+  if (d.t === 'bye') { if (known) { try { conn.close(); } catch (e) { } hostOnGuestGone(conn); } return; }
   if (d.t === 'hello') {
     if (seatOfConn(conn) >= 0) return;
     if (App.started || App.guests.length >= roomCapacity() - 1) {
       try { conn.send({ t: 'full' }); } catch (e) { }
       return;
     }
-    App.guests.push({ conn, name: String(d.name || 'Guest').slice(0, 12) });
+    App.guests.push({ conn, name: String(d.name || 'Guest').slice(0, 12), lastSeen: Date.now() });
     updateRoomScreen();
     sendRoomInfo();
     return;
@@ -284,7 +330,9 @@ function hostOnGuestGone(conn) {
     App.game.pump();
     pushViews();
   } else {
+    const nm = App.guests[idx].name;
     App.guests.splice(idx, 1);
+    toast(t('e_left', nm));
     updateRoomScreen();
     sendRoomInfo();
   }
@@ -348,6 +396,8 @@ function joinRoom() {
     onOpen: (conn) => {
       clearJoinTimer();
       App.guestConn = conn;
+      App._hostSeen = Date.now();
+      startHeartbeat();
       conn.send({ t: 'hello', name: App.name });
       showScreen('screen-room');
       $('#room-code').textContent = code;
@@ -387,6 +437,9 @@ async function runDiag() {
 
 function guestOnData(d) {
   if (!d || typeof d !== 'object') return;
+  App._hostSeen = Date.now();
+  if (d.t === 'ping') return;
+  if (d.t === 'bye') { toast(t('e_hostleft')); goHome(); return; }
   if (d.t === 'room') {
     $('#room-status').textContent = '';
     renderRoster(d.players || []);
@@ -819,6 +872,9 @@ function renderSettle(v) {
 /* ---------------- navigation / cleanup ---------------- */
 
 function goHome() {
+  sendBye();
+  stopHeartbeat();
+  App._hostSeen = null;
   if (App.game) { App.game.stop(); App.game = null; }
   if (App.peer) { try { App.peer.destroy(); } catch (e) { } App.peer = null; }
   App.role = null;
@@ -906,7 +962,12 @@ function boot() {
   $('#btn-exit-game').onclick = goHome;
   $('#btn-chat').onclick = toggleChatPop;
 
-  window.addEventListener('beforeunload', () => { if (App.peer) try { App.peer.destroy(); } catch (e) { } });
+  const farewell = () => {
+    sendBye();
+    if (App.peer) try { App.peer.destroy(); } catch (e) { }
+  };
+  window.addEventListener('beforeunload', farewell);
+  window.addEventListener('pagehide', farewell);
 }
 
 document.addEventListener('DOMContentLoaded', boot);
