@@ -79,6 +79,10 @@ button.off { opacity: .38; text-decoration: line-through; }
 .join-row { display: flex; gap: 10px; }
 .join-row input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 6px; font-size: 20px; text-align: center; }
 .join-row button { flex: 0 0 auto; }
+.diag-btn { align-self: center; margin-top: 4px; opacity: .8; }
+#diag-out { display: flex; flex-direction: column; gap: 4px; }
+.diag-line { font-size: 13px; color: rgba(238,244,238,.85); }
+.diag-verdict { font-size: 13px; margin-top: 6px; color: #ffd67e; line-height: 1.5; }
 .join-row button { padding: 0 26px; }
 
 /* ---------- room ---------- */

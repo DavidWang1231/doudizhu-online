@@ -93,6 +93,7 @@ function applyStaticTexts() {
   set('#t-bcreate', 'b_create'); set('#t-bcreate-d', 'b_create_d');
   set('#t-bpractice', 'b_practice'); set('#t-bpractice-d', 'b_practice_d');
   set('#t-join', 'h_join'); set('#t-rcode', 'r_code');
+  $('#btn-diag').textContent = t('diag_btn');
   set('#t-help-title', 'help_title');
   $('#btn-help').textContent = t('b_help');
   $('#btn-join').textContent = t('b_join');
@@ -218,7 +219,7 @@ function createRoom(attempt) {
     toast(t('e_timeout'));
     goHome();
   }, 12000);
-  App.peer = createHostPeer(App.code, {
+  createHostPeer(App.code, {
     onReady: () => { clearJoinTimer(); setCreateBusy(false); showScreen('screen-room'); updateRoomScreen(); },
     onCodeTaken: () => {
       clearJoinTimer();
@@ -228,6 +229,9 @@ function createRoom(attempt) {
     },
     onError: () => { clearJoinTimer(); setCreateBusy(false); toast(t('e_net')); goHome(); },
     onConnection: (conn) => hostAcceptConn(conn),
+  }).then(p => {
+    if (App.role !== 'host') { try { p.destroy(); } catch (e) { } return; }
+    App.peer = p;
   });
 }
 
@@ -340,7 +344,7 @@ function joinRoom() {
     toast(t('e_timeout'));
     goHome();
   }, 12000);
-  App.peer = createGuestPeer(code, {
+  createGuestPeer(code, {
     onOpen: (conn) => {
       clearJoinTimer();
       App.guestConn = conn;
@@ -355,7 +359,30 @@ function joinRoom() {
     onClose: () => { if (App.role === 'guest') { toast(t('e_hostleft')); goHome(); } },
     onNotFound: () => { clearJoinTimer(); toast(t('e_room404')); goHome(); },
     onError: () => { clearJoinTimer(); toast(t('e_conn')); goHome(); },
+  }).then(p => {
+    if (App.role !== 'guest') { try { p.destroy(); } catch (e) { } return; }
+    App.peer = p;
   });
+}
+
+/* ---------------- network diagnostics ---------------- */
+
+async function runDiag() {
+  const out = $('#diag-out');
+  out.innerHTML = `<div class="diag-line">${t('diag_running')}</div>`;
+  const r = await netDiagnose();
+  const line = (ok, label) =>
+    `<div class="diag-line">${ok ? '✅' : '❌'} ${label}</div>`;
+  let verdict;
+  if (!r.broker) verdict = t('diag_v_broker');
+  else if (r.turn) verdict = t('diag_v_good');
+  else if (r.stun) verdict = t('diag_v_noturn');
+  else verdict = t('diag_v_blocked');
+  out.innerHTML =
+    line(r.broker, t('diag_broker')) +
+    line(r.stun, t('diag_stun')) +
+    line(r.turn, t('diag_turn')) +
+    `<div class="diag-verdict">${verdict}</div>`;
 }
 
 function guestOnData(d) {
@@ -875,6 +902,7 @@ function boot() {
   };
   $('#btn-start').onclick = hostStartGame;
   $('#btn-leave-room').onclick = goHome;
+  $('#btn-diag').onclick = runDiag;
   $('#btn-exit-game').onclick = goHome;
   $('#btn-chat').onclick = toggleChatPop;
 

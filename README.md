@@ -31,6 +31,21 @@ data touches any server.
 2. Guest: enter the code → **Join**
 3. Host: **Start game**
 
+## Connectivity / TURN relay
+
+STUN alone connects peers on ordinary home networks. Networks with client
+isolation or blocked UDP (campus WiFi such as eduroam, many offices) also
+need a TURN relay:
+
+1. Create a free account at [metered.ca/stun-turn](https://www.metered.ca/stun-turn)
+   (50 GB/month free — card games use a few hundred KB per round)
+2. Copy your credentials URL, e.g.
+   `https://YOURAPP.metered.live/api/v1/turn/credentials?apiKey=YOURKEY`
+3. Paste it into `TURN_CREDENTIALS_URL` in `js/net.js` and redeploy
+
+The home screen has a built-in network test ("Can't connect? Run network
+test") that reports broker / STUN / TURN reachability from your network.
+
 ## Run locally
 
 Any static file server works:
