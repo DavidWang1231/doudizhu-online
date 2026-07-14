@@ -24,7 +24,9 @@ function shuffle(a) {
 }
 
 /* "No-shuffle" deck: sorted by rank, then a few random segment moves.
-   Dealt in chunks this keeps same-rank cards clumped -> lots of bombs. */
+   Dealt in chunks this keeps same-rank cards clumped -> lots of bombs.
+   A final random cut keeps the tail (which becomes the bottom cards)
+   from always being the 2s and jokers left there by the sort. */
 function clumpedDeck() {
   const d = makeDeck();
   d.sort((a, b) => a.r - b.r || a.s - b.s);
@@ -35,7 +37,8 @@ function clumpedDeck() {
     const to = Math.floor(Math.random() * (d.length + 1));
     d.splice(to, 0, ...seg);
   }
-  return d;
+  const cut = Math.floor(Math.random() * d.length);
+  return d.slice(cut).concat(d.slice(0, cut));
 }
 
 function counts(ranks) {

@@ -43,7 +43,9 @@ class Game {
     const hands = Array.from({ length: n }, () => []);
     const hs = this.handSize, bs = this.bottomSize;
     if (this.cfg.noShuffle) {
-      let p = 0;
+      // Random first drawer: the seat that fills up last tends to take a long
+      // contiguous (bomb-rich) run from the clumped deck, so don't fix it to 0.
+      let p = Math.floor(Math.random() * n);
       while (hands.some(h => h.length < hs)) {
         const need = hs - hands[p].length;
         if (need > 0) hands[p].push(...deck.splice(0, Math.min(need, 1 + Math.floor(Math.random() * 3))));
