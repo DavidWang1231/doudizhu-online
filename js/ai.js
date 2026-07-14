@@ -15,7 +15,13 @@ function handStrength(handRanks, laizi) {
   s += (m[15] || 0) * 1.5;
   s += (m[14] || 0) * 0.5;
   for (let r = 3; r <= 15; r++) if (r !== laizi && m[r] === 4) s += 3;
-  if (laizi) s += (m[laizi] || 0) * 1.5;
+  if (laizi) {
+    const w = m[laizi] || 0;
+    s += w * 2; // a wild outclasses a 2: it completes any combo
+    let spare = w; // trios a spare wild upgrades to soft bombs
+    for (let r = 3; r <= 15; r++)
+      if (r !== laizi && m[r] === 3 && spare > 0) { s += 1; spare--; }
+  }
   return s;
 }
 
@@ -44,7 +50,7 @@ function aiPlay(ctx) {
   if (!prev) {
     let best = null, bestScore = Infinity;
     for (const m of moves) {
-      let s = m.combo.rank * 3 - m.play.length * 4 + m.wild * 40;
+      let s = m.combo.rank * 3 - m.play.length * 4 + m.wild * (hand.length <= 8 ? 12 : 40);
       if (isBomb(m)) s += hand.length <= 6 ? -40 : 1000;
       else s += breakPenalty(m.play, hc, laizi) * 30;
       if (m.combo.rank >= 15) s += 12;
@@ -67,17 +73,21 @@ function aiPlay(ctx) {
     return mild[0] || null;
   }
 
+  const enemies = [];
+  for (let s = 0; s < nPlayers; s++) if (side(s) !== mySide) enemies.push(s);
+  const enemyMin = Math.min(...enemies.map(s => cardCounts[s]));
+
   if (normal.length) {
     normal.sort((a, b) =>
       (a.wild - b.wild) ||
       (breakPenalty(a.play, hc, laizi) - breakPenalty(b.play, hc, laizi)) ||
       (a.combo.rank - b.combo.rank));
-    return normal[0];
+    const best = normal[0];
+    // Wilds are near-joker value: spend them only under endgame pressure or
+    // to take a big trick; otherwise hold them for soft bombs / the finish.
+    if (best.wild > 0 && enemyMin > 4 && hand.length > 8 && prev.rank < 12 && prev.n < 5) return null;
+    return best;
   }
-
-  const enemies = [];
-  for (let s = 0; s < nPlayers; s++) if (side(s) !== mySide) enemies.push(s);
-  const enemyMin = Math.min(...enemies.map(s => cardCounts[s]));
   if (enemyMin <= 5 || hand.length <= 6) {
     const bombs = moves.filter(isBomb).sort((a, b) => (a.combo.power || 0) - (b.combo.power || 0));
     return bombs[0] || null;
